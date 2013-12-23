@@ -47,7 +47,7 @@ public class PluginLoader {
     private final char FILE_SEP = System.getProperty("file.separator").charAt(0);
     private final String PLUGIN_FOLDER_NAME = "plugins" + FILE_SEP;
     private HashMap<String, AnalyzerPlugin> loadedPlugins;
-    private static PluginLoader instace;
+    private static PluginLoader instance;
     private String curDir;
     
     private PluginLoader() {
@@ -72,10 +72,15 @@ public class PluginLoader {
      * @return PluginLoader instance
      */
     public static PluginLoader getInstance() {
-        if(instace == null)
-            return new PluginLoader();
-        
-        return instace;
+        if(instance == null) {
+            synchronized (PluginLoader.class) {
+                if(instance == null) {
+                    instance = new PluginLoader();
+                }
+            }
+        }
+
+        return instance;
     }
 
     /**
