@@ -27,9 +27,9 @@ package net.bensdevzone.spamanalyzer.control;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.jar.JarEntry;
@@ -51,7 +51,7 @@ public class PluginLoader {
     private String curDir;
     
     private PluginLoader() {
-        loadedPlugins = new HashMap<String, AnalyzerPlugin>();
+        loadedPlugins = new HashMap<>();
         curDir = System.getProperty("user.dir") + FILE_SEP;
         File pluginDir = new File(curDir + PLUGIN_FOLDER_NAME);
         
@@ -96,9 +96,11 @@ public class PluginLoader {
     private void loadPlugins (File[] files) {
         if(files == null)
             throw new  InitializationException ("No Plugins found. Initialization failed.");
-        
-        try {            
-            for(File file : files) {
+
+        JarEntry entry = null;
+
+        for(File file : files) {
+            try {
                 JarFile jar = new JarFile(file);
                 URL[] urls = {new URL("jar:" + file.toURI().toURL() + "!/")};
 
@@ -108,25 +110,26 @@ public class PluginLoader {
 
                 Enumeration e = jar.entries();
                 while (e.hasMoreElements()) {
-                    JarEntry entry = (JarEntry) e.nextElement();
+                    entry = (JarEntry) e.nextElement();
 
                     if (entry.getName().endsWith(".class")) {
-                       Class<?> clazz = cl.loadClass(extractClassName(entry));
+                        Class<?> clazz = cl.loadClass(extractClassName(entry));
 
-                       if(AnalyzerPlugin.class.isAssignableFrom(clazz)
-                               && !AnalyzerPlugin.class.getName()
-                               .equals(clazz.getName())) {
+                        if (AnalyzerPlugin.class.isAssignableFrom(clazz)
+                                && !AnalyzerPlugin.class.getName()
+                                .equals(clazz.getName())) {
                             AnalyzerPlugin pl = (AnalyzerPlugin) clazz.newInstance();
                             loadedPlugins.put(pl.getInternalName(), pl);
                         }
-
                     }
-
                 }
+            } catch (IOException e) {
+                throw new InitializationException("An error occured while trying to load the file " + file.getName());
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                throw new InitializationException("Error during plugin instantiation. AnalyzerPlugin could not be created." +
+                        " Cause: " + entry != null ? entry.getName() : "null");
             }
-        } catch (Exception e) {
-            throw new InitializationException("Error during plugin instantiation. AnalyzerPlugin could not be created.");
-        } 
+        }
     }
     
     private String extractClassName(JarEntry entry) {
