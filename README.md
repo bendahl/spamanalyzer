@@ -1,3 +1,5 @@
+# IMPORTANT NOTE: This project is archived and will not be actively maintained any further.
+
 spamanalyzer
 ============
 
